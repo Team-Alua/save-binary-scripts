@@ -1,11 +1,25 @@
 #!/usr/bin/python3
 import struct
-import sys
-filename = sys.argv[1]
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('in_file', nargs=1)
+parser.add_argument('out_file', nargs=1)
+
+parser.add_argument('-d', dest='patch_folders', type=str, nargs="*")
+
+args = parser.parse_args()
+
+
+in_file = args.in_file[0]
+out_file = args.out_file[0]
+patch_folders = args.patch_folders
+
 data = None
 
 try:
-    with open(filename, 'rb+') as file:
+    with open(in_file, 'rb+') as file:
         data = bytearray(file.read())
 except FileNotFoundError as e:
     print("Please supply a path to a gravity rush 2 save file.")
@@ -99,8 +113,7 @@ def convert_to_dict(saveData):
 
 saveDict = convert_to_dict(data)
 
-# import json
-patches = []
+import json
 
 def do_patch(dictionary, patches):
     for [path, value] in patches:
@@ -119,8 +132,15 @@ def do_patch(dictionary, patches):
             value = tuple(value)
         subDict[valueKey] = value
 
-for patch in patches:
-    do_patch(saveDict, patches)
+import os
+
+for patch_folder in patch_folders:
+    for patch_fp in os.listdir(patch_folder):
+        if not patch_fp.endswith(".json"):
+            continue
+        full_path = os.path.join(patch_folder, patch_fp)
+        patch = json.load(open(full_path))
+        do_patch(saveDict, patch)
 
 import copy
 import struct
@@ -256,5 +276,6 @@ def dict_to_savebin(dictionary):
 
 saveBuffer = dict_to_savebin(saveDict)
 
-with open('out.bin', 'wb') as out:
+with open(out_file, 'wb') as out:
     out.write(saveBuffer)
+
